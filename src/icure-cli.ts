@@ -1,17 +1,20 @@
 import fetch from 'node-fetch'
 import {
 	ContactDto,
-	Filter, FilterChain,
-	ImportResultDto, ListOfIdsDto, MedicationSchemeExportInfoDto, PatientDto,
+	Filter,
+	ImportResultDto,
+	ListOfIdsDto,
+	MedicationSchemeExportInfoDto,
+	PatientDto,
 	UserDto
 } from 'icc-api'
-import { forEachDeep, mapDeep } from './reduceDeep'
-import { flatMap, chunk } from 'lodash'
+import { chunk, flatMap, get, assign } from 'lodash'
 import { Api } from './api'
-import { format, addMonths, addYears } from 'date-fns'
 
 import * as colors from 'colors/safe'
 import { Args, CommandInstance } from 'vorpal'
+import StatusEnum = UserDto.StatusEnum
+import TypeEnum = UserDto.TypeEnum
 
 require('node-json-color-stringify')
 
@@ -198,6 +201,36 @@ vorpal
 			services: flatMap(latestImport.ctcs!.map(c => c.services))
 		}))
 		this.log(api.cryptoicc.utils.ua2utf8(latestExport))
+	})
+
+vorpal
+	.command('createUser <firstName> <lastName> <email> [ssin] [nihii] [parentId]', 'Create user')
+	.action(async function(this: CommandInstance, args: Args) {
+		this.log('FirstName: ' + args.firstName + ' LastName: ' + args.lastName + ' Email: ' + args.email + ' Ssin' + args.ssin + ' Nihii: ' + args.nihii + ' ParentId: ' + args.parentId)
+		let hcp = await api.hcpartyicc.createHealthcareParty({
+			name: get(args, 'firstName', null) + ' ' + get(args, 'lastName', null),
+			lastName: get(args, 'lastName', null),
+			firstName: get(args, 'firstName', null),
+			nihii: get(args, 'nihii', ''),
+			ssin: get(args, 'ssin', ''),
+			parentId: get(args, 'parentId', null)
+		})
+		let delegations = {
+			all: [hcp.id]
+		}
+		if (args.delegationTypeForParent === 'all') {
+			delegations.all.push(args.parentId)
+		}
+		let user = await api.usericc.createUser({
+			healthcarePartyId: hcp.id,
+			name: get(args, 'firstName', null) + ' ' + get(args, 'lastName', null),
+			email: get(args, 'email', null),
+			applicationTokens: { tmpFirstLogin: api.cryptoicc.randomUuid() },
+			status: StatusEnum.ACTIVE,
+			type: TypeEnum.Database,
+			autoDelegations: delegations
+		})
+		this.log('UserId: ' + user.id + ' Token: ' + user.applicationTokens.tmpFirstLogin)
 	})
 
 vorpal
