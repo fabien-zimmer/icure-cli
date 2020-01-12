@@ -204,7 +204,7 @@ vorpal
 	})
 
 vorpal
-	.command('createUser <firstName> <lastName> <email> [ssin] [nihii] [parentId]', 'Create user')
+	.command('createUser <firstName> <lastName> <email> [ssin] [nihii] [parentId]', 'This function create user in db. firstName, lastName and email are mandatory. Ssin, nihii and parent id are optional')
 	.action(async function(this: CommandInstance, args: Args) {
 		this.log('FirstName: ' + args.firstName + ' LastName: ' + args.lastName + ' Email: ' + args.email + ' Ssin' + args.ssin + ' Nihii: ' + args.nihii + ' ParentId: ' + args.parentId)
 		let hcp = await api.hcpartyicc.createHealthcareParty({
